@@ -165,14 +165,43 @@ export class CiphersComponent extends BaseCiphersComponent implements OnInit, On
         this.broadcasterService.unsubscribe(ComponentId);
     }
 
-    selectCipher(cipher: CipherView) {
-        this.selectedTimeout = window.setTimeout(() => {
-            if (!this.preventSelected) {
-                super.selectCipher(cipher);
-                this.router.navigate(['/view-cipher'], { queryParams: { cipherId: cipher.id } });
+    viewCipher(cipher: CipherView) {
+        super.selectCipher(cipher);
+        this.router.navigate(['/view-cipher'], { queryParams: { cipherId: cipher.id } });
+    }
+
+    async fillCipher(cipher: CipherView) {
+        this.totpCode = null;
+        if (this.totpTimeout != null) {
+            window.clearTimeout(this.totpTimeout);
+        }
+
+        if (this.pageDetails == null || this.pageDetails.length === 0) {
+            this.analytics.eventTrack.next({ action: 'Autofilled Error' });
+            this.toasterService.popAsync('error', null, this.i18nService.t('autofillError'));
+            return;
+        }
+
+        try {
+            this.totpCode = await this.autofillService.doAutoFill({
+                cipher: cipher,
+                pageDetails: this.pageDetails,
+                doc: window.document,
+            });
+            this.analytics.eventTrack.next({ action: 'Autofilled' });
+            if (this.totpCode != null) {
+                this.platformUtilsService.copyToClipboard(this.totpCode, { window: window });
             }
-            this.preventSelected = false;
-        }, 200);
+            if (this.popupUtilsService.inPopup(window)) {
+                BrowserApi.closePopup(window);
+            }
+        } catch {
+            this.ngZone.run(() => {
+                this.analytics.eventTrack.next({ action: 'Autofilled Error' });
+                this.toasterService.popAsync('error', null, this.i18nService.t('autofillError'));
+                this.changeDetectorRef.detectChanges();
+            });
+        }
     }
 
     selectFolder(folder: FolderView) {

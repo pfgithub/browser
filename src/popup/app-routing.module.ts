@@ -211,6 +211,11 @@ const routes: Routes = [
         data: { state: 'clone-cipher' },
     },
     {
+        path: 'autofill-cipher',
+        component: AutofillCipherComponent,
+        data: {},
+    },
+    {
         path: 'tabs',
         component: TabsComponent,
         data: { state: 'tabs' },
