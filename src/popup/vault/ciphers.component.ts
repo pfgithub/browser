@@ -43,6 +43,7 @@ const ComponentId = 'CiphersComponent';
     templateUrl: 'ciphers.component.html',
 })
 export class CiphersComponent extends BaseCiphersComponent implements OnInit, OnDestroy {
+    pageDetails: any[] = [];
     groupingTitle: string;
     state: any;
     folderId: string = null;
@@ -51,7 +52,9 @@ export class CiphersComponent extends BaseCiphersComponent implements OnInit, On
     nestedFolders: Array<TreeNode<FolderView>>;
     nestedCollections: Array<TreeNode<CollectionView>>;
     searchTypeSearch = false;
-
+    
+    private totpCode: string;
+    private totpTimeout: number;
     private selectedTimeout: number;
     private preventSelected = false;
     private applySavedState = true;
@@ -67,6 +70,16 @@ export class CiphersComponent extends BaseCiphersComponent implements OnInit, On
         this.pageSize = platformUtilsService.isEdge() ? 25 : 100;
         this.applySavedState = (window as any).previousPopupUrl != null &&
             !(window as any).previousPopupUrl.startsWith('/ciphers');
+    }
+    
+    async load(filter: (cipher: CipherView) => boolean = null, deleted: boolean = false) {
+        super.load(filter, deleted);
+        this.pageDetails = [];
+        BrowserApi.tabSendMessage(tab, {
+            command: 'collectPageDetails',
+            tab: tab,
+            sender: BroadcasterSubscriptionId,
+        });
     }
 
     async ngOnInit() {
@@ -149,6 +162,15 @@ export class CiphersComponent extends BaseCiphersComponent implements OnInit, On
                             window.setTimeout(() => {
                                 this.refresh();
                             }, 500);
+                        }
+                        break;
+                    case 'collectPageDetailsResponse':
+                        if (message.sender === ComponentId) {
+                            this.pageDetails.push({
+                                frameId: message.webExtSender.frameId,
+                                tab: message.tab,
+                                details: message.details,
+                            });
                         }
                         break;
                     default:
